@@ -41,7 +41,7 @@ table_name = 'score'
 
 # mini test to test small size data to
 # make sure everything runs well.
-mini_test = True
+mini_test = False
 
 
 def _get_params_conf(estimator_name):

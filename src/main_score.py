@@ -43,7 +43,7 @@ import joblib
 # Do a mini-test or real test
 # Fast mini-test to make sure everything
 # runs well.
-mini_test = True
+mini_test = False
 
 
 def get_important_features(X_train, y_train):
