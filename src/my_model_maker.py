@@ -1,14 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Aug 13 20:47:12 2023
+Created on Sun Aug 13 20:47:12 2023.
 
 @author: Kang Liew Bei
 
 Create models.
 """
 
-from my_std_lib import *
-
+from my_std_lib import output_path
+from my_std_lib import output_file
+from my_std_lib import cv_score_conf
+from my_std_lib import models_conf
+from my_std_lib import scoring
+from my_std_lib import RND_NUM
+import joblib
+from configparser import ConfigParser
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import SGDRegressor
@@ -20,12 +28,12 @@ from sklearn.model_selection import GridSearchCV
 
 def get_models_available(kind='all'):
     """
-    Return a list of estimator available for use
+    Return a list of estimator available for use.
 
     Parameters
     ----------
     kind : ['all', 'regressor', 'classifier']
-        The kind of estimators requested. 
+        The kind of estimators requested.
         Default return all estimators available.
 
     Returns
@@ -93,22 +101,26 @@ def make_knn_regressor(X, y, param=None):
             'knn__p': [1, 2]
         }
 
-    grid = do_grid_search(knn, param_grid, X, y)
+    grid = _do_grid_search(knn, param_grid, X, y)
     # save model, write params to config file, write ouput info
     estimator_name = 'knn'
-    post_training(estimator_name, grid)
+    _post_training(estimator_name, grid)
+    # write all the parameters of the estimator
+    _write_model_config(estimator_name, grid.best_estimator_['knn'])
 
 
 def make_forest_regressor(X, y, param=None):
 
     # limit the size of the tree
-    forest = RandomForestRegressor(
-        n_estimators=50,
-        max_depth=30,
-        min_samples_split=4,
-        bootstrap=True, oob_score=False,
-        random_state=RND_NUM, warm_start=True
-    )
+    forest = Pipeline([
+        ('forest', RandomForestRegressor(
+            n_estimators=50,
+            max_depth=30,
+            min_samples_split=4,
+            bootstrap=True, oob_score=False,
+            random_state=RND_NUM, warm_start=True
+        ))
+    ])
 
     if param is not None:
         param_grid = param
@@ -116,15 +128,17 @@ def make_forest_regressor(X, y, param=None):
         # max_features: more randomness can be achieved by setting
         # smaller values, e.g. 0.3.
         param_grid = {
-            'criterion': ['squared_error', 'absolute_error',
-                          'friedman_mse', 'poisson'],
-            'max_features': [0.3, 0.4, 0.5],
+            'forest__criterion': ['squared_error', 'absolute_error',
+                                  'friedman_mse', 'poisson'],
+            'forest__max_features': [0.3, 0.4, 0.5],
         }
 
-    grid = do_grid_search(forest, param_grid, X, y)
+    grid = _do_grid_search(forest, param_grid, X, y)
     # save model, write params to config file, write ouput info
     estimator_name = "forest"
-    post_training(estimator_name, grid)
+    _post_training(estimator_name, grid)
+    # write all the parameters of the estimator
+    _write_model_config(estimator_name, grid.best_estimator_['forest'])
 
 
 def make_sgd_regressor(X, y, param=None):
@@ -151,11 +165,13 @@ def make_sgd_regressor(X, y, param=None):
             'sgd__alpha': [0.0001, 0.001, 0.005, 0.0125, 0.025]
         }
 
-    grid = do_grid_search(sgd, param_grid, X, y)
+    grid = _do_grid_search(sgd, param_grid, X, y)
 
     # save model, write params to config file, write ouput info
     estimator_name = 'sgd'
-    post_training(estimator_name, grid)
+    _post_training(estimator_name, grid)
+    # write all the parameters of the estimator
+    _write_model_config(estimator_name, grid.best_estimator_['sgd'])
 
 
 def make_polynomial(X, y, param=None):
@@ -165,7 +181,7 @@ def make_polynomial(X, y, param=None):
 
     poly = Pipeline([
         ('std', StandardScaler()),
-        ('poly', poly_fea),
+        ('polynomial', poly_fea),
         ('linear', linear)
     ])
 
@@ -173,16 +189,18 @@ def make_polynomial(X, y, param=None):
         param_grid = param
     else:
         param_grid = {
-            'poly__degree': [1, 2, 3, 4, 5],
-            'poly__interaction_only': [False, True],
-            'poly__include_bias': [False, True]
+            'polynomial__degree': [1, 2, 3, 4, 5],
+            'polynomial__interaction_only': [False, True],
+            'polynomial__include_bias': [False, True]
         }
 
-    grid = do_grid_search(poly, param_grid, X, y)
+    grid = _do_grid_search(poly, param_grid, X, y)
 
     # save model, write params to config file, write ouput info
     estimator_name = "polynomial"
-    post_training(estimator_name, grid)
+    _post_training(estimator_name, grid)
+    # write all the parameters of the estimator
+    _write_model_config(estimator_name, grid.best_estimator_['polynomial'])
 
 
 def make_svr(X, y, param=None):
@@ -207,41 +225,57 @@ def make_svr(X, y, param=None):
         ]
     )
 
-    grid = do_grid_search(svr, param_grid, X, y)
+    grid = _do_grid_search(svr, param_grid, X, y)
 
     # save the model, write params to config file
     # write the output
     estimator_name = "svr"
-    post_training(estimator_name, grid)
+    _post_training(estimator_name, grid)
+    # write all the parameters of the estimator
+    _write_model_config(estimator_name, grid.best_estimator_['svr'])
 
 
-def post_training(estimator_name, grid):
+def _post_training(estimator_name, grid):
     # do the writing of output paramters, scores,
     # save the model.
     save_model(grid.best_estimator_, estimator_name)
-    write_model_config(estimator_name, grid.best_estimator_)
-    write_best_params(estimator_name, grid)
+    _write_best_params(estimator_name, grid)
 
 
 def save_model(estimator, estimator_name):
+    """
+    Save a trained estimator.
+
+    Parameters
+    ----------
+    estimator : estimator
+        Estimator that has been trained.
+    estimator_name : str
+        Name of the estimator pickle file.
+
+    Returns
+    -------
+    None.
+
+    """
     # Pickle the model
     filename = output_path + estimator_name + ".pkl"
     job = joblib.dump(estimator, filename)
     print(f"{str(estimator)} \n is pickled to {job}")
 
 
-def do_grid_search(estimator, param_grid, X, y):
+def _do_grid_search(estimator, param_grid, X, y):
     grid = GridSearchCV(
         estimator, param_grid,
         scoring=scoring,
-        cv=5,
+        cv=3,
         refit=scoring
     )
     grid = grid.fit(X, y)
     return grid
 
 
-def write_model_config(estimator_name, estimator):
+def _write_model_config(estimator_name, estimator):
     # Write the best params from grid search
     config = ConfigParser()
 
@@ -259,8 +293,7 @@ def write_model_config(estimator_name, estimator):
         config.write(configfile)
 
 
-def write_best_params(estimator_name, grid):
-
+def _write_best_params(estimator_name, grid):
     # Also output the best params to a quick
     # viewing output file
 
@@ -285,9 +318,10 @@ def write_best_params(estimator_name, grid):
         config[estimator_name][k] = str(v)
         f.write(f"{str(k)} {str(v)} \n")
 
-    cv_result = grid.cv_results_
-    for k, v in cv_result.items():
-        config[estimator_name][k] = str(v)
+    # too verbose
+    # cv_result = grid.cv_results_
+    # for k, v in cv_result.items():
+    #    config[estimator_name][k] = str(v)
 
     # write output
     with open(cv_score_conf, 'a') as configfile:

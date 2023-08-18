@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug 16 15:10:51 2023
+Created on Wed Aug 16 15:10:51 2023.
 
 @author: Liew
 
 Preprocessing the raw dataframe features and label.
-
-After handling the missing value NaN, the data is
-split into train-test set.
 """
 
+import numpy as np
+import pandas as pd
+import joblib
+from my_std_lib import data_path
 
-from my_std_lib import *
 
-
-def process_sleep(raw):
+def _process_sleep(raw):
     # Cast the sleep_time and wake_time to date time
     format = '%H:%M'
     raw['sleep_time'] = pd.to_datetime(raw['sleep_time'], format=format)
@@ -41,13 +40,13 @@ def process_sleep(raw):
     # Keep the sleep_duration in case it is needed
 
 
-def process_attendance(raw):
+def _process_attendance(raw):
     # Imputing with mean value
     med = raw['attendance_rate'].agg(np.median)
     raw['attendance_rate'] = raw['attendance_rate'].fillna(value=med)
     # Binarize the attendance_rate
     q1 = raw['attendance_rate'].quantile(0.25)
-    raw['attendance'] = pd.cut(
+    raw['attendance_rate'] = pd.cut(
         raw['attendance_rate'],
         bins=[0, q1, 100.0],
         labels=['0', '1'],
@@ -55,50 +54,44 @@ def process_attendance(raw):
     )
 
 
-def process_final_test(raw):
+def _process_final_test(raw):
     # Drop the missing values
     raw.dropna(subset=['final_test'], how='any', inplace=True)
 
 
-def process_direct_admission(raw):
+def _process_direct_admission(raw):
     # binary encoding
     # all dummies are processed together
-    # rename to a short columns names
     # make the category into lowercase
     raw['direct_admission'] = raw['direct_admission'].apply(str.lower)
     raw['direct_admission'] = raw['direct_admission'].apply(
-        lambda s: replace_zero_one(s, 'no', 'yes'))
-    raw.rename(columns={'direct_admission': 'direct'}, inplace=True)
+        lambda s: _replace_zero_one(s, 'no', 'yes'))
 
 
-def process_cca(raw):
-    # rename CCA to lowercase cca to make it the same
-    # as the other column names.
+def _process_cca(raw):
     # make all the category names into lowercase
     # cca=none remains the same,
     # cca=arts, sports, clubs will be changed to some
     # categorize into none or some
-    raw.rename(columns={'CCA': 'cca'}, inplace=True)
+    # make the values into all lowercase
+    raw['CCA'] = raw['CCA'].apply(str.lower)
+    # replace none or yes for the different sports
 
-    raw['cca'] = raw['cca'].apply(str.lower)
-
-    # this is clearer and easier to make more
-    # changes if needed.
     def replace_category(s, new_name, old_name_list):
         if s in old_name_list:
             s = s.replace(s, new_name)
         return s
 
     # both lines will work
-    raw['cca'] = raw['cca'].apply(lambda s: replace_category(
+    raw['CCA'] = raw['CCA'].apply(lambda s: replace_category(
         s, 'yes', ['arts', 'sports', 'clubs']))
-    # s_test = s_test.apply(lambda s: s.replace(s, 'some')
-    # if s in ['arts', 'sports','clubs'] else s)
-    raw['cca'] = raw['cca'].apply(
-        lambda s: replace_zero_one(s, 'none', 'yes'))
+    raw['CCA'] = raw['CCA'].apply(
+        lambda s: _replace_zero_one(s, 'none', 'yes'))
+    # rename to lowercase
+    raw.rename(columns={'CCA': 'cca'}, inplace=True)
 
 
-def process_tuition(raw):
+def _process_tuition(raw):
     # Make the unique values into only 'yes', 'no'
     # Make the category values lowercase
     def replace_tuition(s):
@@ -110,21 +103,19 @@ def process_tuition(raw):
 
     raw['tuition'] = raw['tuition'].apply(replace_tuition)
     raw['tuition'] = raw['tuition'].apply(
-        lambda s: replace_zero_one(s, 'no', 'yes'))
+        lambda s: _replace_zero_one(s, 'no', 'yes'))
 
 
-def process_learning_style(raw):
+def _process_learning_style(raw):
     # binary encoding
     # all dummies are processed together
-    # rename to a short columns names
     # make the categor to lowercase
     raw['learning_style'] = raw['learning_style'].str.lower()
     raw['learning_style'] = raw['learning_style'].apply(
-        lambda s: replace_zero_one(s, 'auditory', 'visual'))
-    raw.rename(columns={'learning_style': 'learning'}, inplace=True)
+        lambda s: _replace_zero_one(s, 'auditory', 'visual'))
 
 
-def process_number_of_siblings(raw):
+def _process_number_of_siblings(raw):
     # Change the number to category string for use
     # with get_dummies.
     def replace_num(s):
@@ -135,13 +126,13 @@ def process_number_of_siblings(raw):
         elif s == 2:
             return 'two'
 
-    raw['number_of_siblings'] = raw['number_of_siblings'].apply(replace_num)
-    # rename to a short columns names
-    raw.rename(columns={'number_of_siblings': 'siblings'}, inplace=True)
+    # raw['number_of_siblings'] = raw['number_of_siblings'].apply(replace_num)
+    pass  # leave the number as it is
 
 
-def process_transport(raw):
+def _process_transport(raw):
     # Change the category values to shorter names
+
     # This values is actually not used.
     def replace_transport(s):
         if s == 'private transport':
@@ -150,13 +141,13 @@ def process_transport(raw):
             return 'public'
         return s  # unchanged for walk
 
-    # rename the mode_of_transport to a shorter name
-    raw.rename(columns={'mode_of_transport': 'transport'}, inplace=True)
+    # if this is used, it can be used to changed to dummies
     # change the category values for later get_dummies
-    raw['transport'] = raw['transport'].apply(replace_transport)
+    raw['mode_of_transport'] = raw['mode_of_transport'].apply(
+        replace_transport)
 
 
-def process_age(raw):
+def _process_age(raw):
     # Correct the values
     # Original age has mistakes in the input as:
     # The age -5, -4, 5 and 6 appears to be mistakes in the input.
@@ -164,6 +155,7 @@ def process_age(raw):
     # Therefore, it is quite safe to assume that the -5 and 5 are
     # actually 15, and -4 and 6 are actually 16.
     # Use category for age for easy comparison.
+
     # This feature is actually not used in learning.
     def correct_age(a):
         if (a == -5) or (a == 5) or (a == 15):
@@ -175,9 +167,13 @@ def process_age(raw):
     raw['age'] = raw['age'].apply(correct_age)
 
 
-def replace_zero_one(s, val_zero, val_one):
+def _replace_zero_one(s, val_zero, val_one):
     # val_zero = the original value to be replaced with 0
     # val_one = the original value to be replaced with 1
+    # change all to lowercase
+    s = s.lower()
+    val_zero = val_zero.lower()
+    val_one = val_one.lower()
     if s == val_zero:
         s = 0
     elif s == val_one:
@@ -185,7 +181,7 @@ def replace_zero_one(s, val_zero, val_one):
     return s
 
 
-def drop_cols(raw, col_names):
+def _drop_cols(raw, col_names):
     # drop columns that are not used
     for col in col_names:
         raw.drop(columns=col, inplace=True)
@@ -210,70 +206,64 @@ def process_all_cols(raw):
     # process all the columns
 
     # sleep
-    process_sleep(raw)
+    _process_sleep(raw)
     print("sleep")
     print(f"{raw['sleep'].unique()}")
 
     # attendance_rate
-    process_attendance(raw)
+    _process_attendance(raw)
     print("attendance")
-    print(f"{raw['attendance'].unique()}")
+    print(f"{raw['attendance_rate'].unique()}")
 
     # nan in final_test
-    process_final_test(raw)
+    _process_final_test(raw)
     no_null = not raw["final_test"].isna().any()
     print("No null values in final_test: "
           f"{no_null}")
 
     # binary encoding for direct_admission
-    process_direct_admission(raw)
+    _process_direct_admission(raw)
     print("direct_admission is used as it is:")
-    print(f"{raw['direct'].unique()}")
+    print(f"{raw['direct_admission'].unique()}")
 
     # make cca into only two categories
-    process_cca(raw)
+    _process_cca(raw)
     print("cca")
     print(f"{raw['cca'].unique()}")
 
     # make tuition into two classes
-    process_tuition(raw)
+    _process_tuition(raw)
     print("tuition")
     print(f"{raw['tuition'].unique()}")
 
     # make learning_style into two categories
-    process_learning_style(raw)
+    _process_learning_style(raw)
     print("learning_style")
-    print(f"{raw['learning'].unique()}")
+    print(f"{raw['learning_style'].unique()}")
 
     # change the number of siblings into category string
-    process_number_of_siblings(raw)
+    _process_number_of_siblings(raw)
     print("number_of_siblings")
-    print(f"{raw['siblings'].unique()}")
+    print(f"{raw['number_of_siblings'].unique()}")
 
     # change the transport category name
     # this feature is not used for learning.
-    process_transport(raw)
+    _process_transport(raw)
 
     # correct the age value
     # this feature is not used for learning.
-    process_age(raw)
+    _process_age(raw)
 
     # drop columns that are not used
-    unused = ['gender', 'n_female', 'n_male', 'transport',
+    unused = ['gender', 'n_female', 'n_male', 'mode_of_transport',
               'age', 'bag_color', 'student_id', 'index']
-    drop_cols(raw, unused)
+    _drop_cols(raw, unused)
     print("Not using these features:")
-
     for s in unused:
         print(f"- {s}")
 
     # get dummies for number_of_siblings only
-
-    # first attempt: get too many features
-    # cols = ['tuition', 'sleep', 'attendance', 'direct',
-    #        'cca', 'learning', 'siblings']
-    # second attempt: reduce dummies to siblings only
-    cols = ['siblings']
+    cols = ['number_of_siblings']
     raw = pd.get_dummies(raw, columns=cols, dtype=np.uint8)
     print("Features for learning:")
     print(f"{len(raw.columns)} total")
@@ -283,14 +273,72 @@ def process_all_cols(raw):
     return raw  # in processed form
 
 
-# Mapping of column names that has been shorted to
-# the original column names
-col_names_map = {
-    'direct_admission': 'direct',
-    'attendance_rate': 'attendance',
-    'direct_admission': 'direct',
-    'CCA': 'cca',
-    'learning_style': 'learning',
-    'number_of_siblings': 'siblings',
-    'mode_of_transport': 'transport'
-}
+def save_dataframe(dataframe, filename="dataframe"):
+    """
+    Save the dataframe to a pickle file.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        Save a dataframe for later use. Default dataframe
+
+    filename : str
+        A name for the name. Output data path
+        and ext .pkl will be appended by default.
+
+    Returns
+    -------
+    None.
+
+    """
+    pickle_name = data_path + filename + '.pkl'
+    j = joblib.dump(dataframe, pickle_name)
+    print(f"{j} is pickled to {pickle_name}")
+
+
+# Global variables
+# Default filename for the preprocessed file
+default_filename = "prep_df"
+
+
+def prep_load(filename=default_filename):
+    """
+    Load a pickled dataframe.
+
+    Parameters
+    ----------
+    filename : str, optional
+        Filename of the pickle file. The default is "prep_df".
+        The default path is data/prep_df.pkl.
+
+    Returns
+    -------
+    pred_df : pd.DataFrame
+        Dataframe loaded from the pickle file.
+
+    """
+    pickle_name = data_path + filename + '.pkl'
+    prep_df = joblib.load(pickle_name)
+    return prep_df
+
+
+def prep_save(raw_dataframe, filename=default_filename):
+    """
+    Preprocessed and save dataframe to a pickle file.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        Plain, raw dataframe that has not been preprocessed.
+
+    filename : str
+        Filename to the pickled dataframe.
+        Default is "prep_df".
+
+    Returns
+    -------
+    None.
+
+    """
+    df_prep = process_all_cols(raw_dataframe)
+    save_dataframe(df_prep, filename)

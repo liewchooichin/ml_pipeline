@@ -4,34 +4,8 @@ Created on Sun Aug 13 20:31:55 2023.
 
 @author:Liew
 
-Import frequently used libraries.
+Import frequently used variables.
 """
-
-
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from sklearn.pipeline import Pipeline
-
-from sklearn.preprocessing import StandardScaler
-
-
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import median_absolute_error
-
-from sklearn.model_selection import cross_validate
-
-
-from sklearn.datasets import load_diabetes
-
-import joblib
-from time import time
-import os
-
-from configparser import ConfigParser
 
 # global variables
 RND_NUM = 10
@@ -44,10 +18,15 @@ multi_scoring = ['neg_mean_squared_error',
                  ]
 scoring = 'neg_root_mean_squared_error'
 
-
+# various files and paths
 data_path = '../data/'
 output_path = '../output/'
-output_file = '../output/output.txt'  # output info
-models_conf = '../output/models.conf'  # model config file
-cv_score_conf = '../output/cv_score.conf'  # cv score
+output_file = output_path + 'output.txt'  # output info
+feature_conf = output_path + 'features.conf'  # features used
+models_conf = output_path + 'models.conf'  # model config file
+cv_score_conf = output_path + 'cv_score.conf'  # cv score
+pred_conf = output_path + 'pred.conf'  # prediction scores
+importance_conf = output_path + 'importance.conf'  # feature importances
 
+# params of model which can be changed
+params_conf = output_path + 'params.conf'
