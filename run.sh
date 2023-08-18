@@ -3,7 +3,7 @@ PATH=$PATH:/home/runner/work/aiap-bootcamp1-liew-chooi-chin/aiap-bootcamp1-liew-
 export PATH
 cd /home/runner/work/aiap-bootcamp1-liew-chooi-chin/aiap-bootcamp1-liew-chooi-chin/src
 # get the db file from url
-python get_score_db.py
+python my_get_score_db.py
 # do the running of all algo,
 # write the necessary output/features.conf,
 # and also the output/params.conf,
