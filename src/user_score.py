@@ -12,18 +12,26 @@ For example, sqlite table name is 'score'.
 The file must be '../data/score.db'.
 The features can be selected by editing output/features.conf.
 Set the features by True or False.
+
+Parameters of different models can be set.
+The parameters can be set at '../output/params.conf'
 """
 
+# from my_std_lib import table_name
+from my_std_lib import mini_test
 from my_std_lib import RND_NUM
 from my_std_lib import data_path
-from my_std_lib import output_path
-from my_std_lib import feature_conf
+# from my_std_lib import output_path
+from my_std_lib import output_file
+# from my_std_lib import feature_conf
 from my_std_lib import params_conf
+from my_std_lib import check_file_directory
 from my_get_db import read_sqlite3_from_file
 from my_preprocessing import process_all_cols
 from my_prepare_dataset import make_numpy
-from main_score import make_all_models
-from main_score import make_all_prediction
+# from main_model import make_all_models
+# from main_prediction import make_all_prediction
+from main_feature_selection import read_features_from_file
 from my_model_maker import get_models_available
 from my_model_maker import make_model
 from my_model_eval import load_model
@@ -33,15 +41,8 @@ from argparse import ArgumentParser
 from configparser import ConfigParser
 from time import time
 import os
-import joblib
+# import joblib
 import sys
-
-# table name of the db
-table_name = 'score'
-
-# mini test to test small size data to
-# make sure everything runs well.
-mini_test = False
 
 
 def _get_params_conf(estimator_name):
@@ -67,16 +68,22 @@ def _get_params_conf(estimator_name):
         # need to type cast into proper type
         # test for bool, float and int
         if v == 'None':
+            # check for None
             proper_value = None
         elif (v == 'True') or (v == 'False'):
+            # check for boolean
             proper_value = bool(v)
         elif ('.' in v) and (v[0].isnumeric()):
+            # check for float
             proper_value = float(v)
         elif ('.' not in v) and (v[0].isnumeric()):
+            # check for int
             proper_value = int(v)
         elif v[0] == '-':
+            # check for negatives
             proper_value = int(v)
         else:
+            # should be string now
             proper_value = v
         print(f"{param_name} = {proper_value}, {type(proper_value)}")
 
@@ -88,26 +95,15 @@ def _get_params_conf(estimator_name):
 
 
 def _preprocess_select_features(df_test):
+    # select features from the features.conf
+    # select a feature if it is True, otherwise
+    # the feature is not included in training.
+
     # preprocess the raw dataframe
     df_prep = process_all_cols(df_test)
 
-    # select features from the feature.conf
-    # check for the features config file
-    if os.path.exists(feature_conf) is False:
-        raise FileNotFoundError(f'{feature_conf} is not found.')
-    config = ConfigParser()
-    config.read(feature_conf)
-    label_name = config['label']['name']
-    print(f"{label_name} - label name")
-    # From the features_conf, selected features is True,
-    # if false, the features is not selected for training.
-    feature_names = []
-    for k, v in config['features'].items():
-        if v == 'True':
-            feature_names.append(k)
-    print(f"{len(feature_names)} selected features")
-    for i in feature_names:
-        print(f"- {i}")
+    # read the features
+    feature_names, label_name = read_features_from_file()
 
     # return the preprocessed dataframe, selected features
     # and label.
@@ -116,11 +112,8 @@ def _preprocess_select_features(df_test):
 
 # Main
 if __name__ == "__main__":
-    # check if the file directory exists
-    if os.path.exists(data_path) is False:
-        os.mkdir(data_path)
-    if os.path.exists(output_path) is False:
-        os.mkdir(output_path)
+    # check if the data and output directory exists
+    check_file_directory()
 
     # Argument parsing
     parser = parser = ArgumentParser(
@@ -162,9 +155,9 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(0)
 
+    # list models available
     if args.list is True:
         print("List of models")
-        print("all: make all models listed  here")
         print("polynomial: polynomial linear regression")
         print("svr: vector support machine")
         print("forest: random forest")
@@ -183,8 +176,7 @@ if __name__ == "__main__":
 
     # check if model name is valid
     model_list = get_models_available()
-    # there is one more 'all' models option
-    model_list.append('all')
+
     if args.model not in model_list:
         print("Model not found. "
               "Use -l or --list to see the list of models.")
@@ -193,7 +185,9 @@ if __name__ == "__main__":
     # if parameters is specified, check if the
     # output/params.conf exists
     params = dict()  # default to none
-    if args.params == 'yes':
+    # lowercase for the params to take care of
+    # either Yes, yes, YES and etc.
+    if args.params.lower() == 'yes':
         if os.path.exists(params_conf) is False:
             print(f"{params_conf} is not found.")
             sys.exit(0)
@@ -223,7 +217,11 @@ if __name__ == "__main__":
         random_state=RND_NUM
     )
 
+    # write output to file
+    f = open(output_file, "a")
+    f.write(f"model: {args.model} \n")
     # mini test for testing
+    print(f"This is a mini test: {mini_test}")
     if mini_test is True:
         # mini test to make sure everything runs fine
         make_model(args.model, X_train[:50, :], y_train[:50], params)
@@ -238,8 +236,10 @@ if __name__ == "__main__":
         score = get_prediction_score(model, X_test, y_test)
         # write the score
         for k, v in score.items():
+            f.write(f"{k}: {v} \n")
             print(f"{k}: {v}")
         elapsed_time = time() - start_time
+        f.write(f"{elapsed_time/60} min - time taken \n")
         print(f"{elapsed_time/60} min - time taken")
     else:
         print("Not doing any training or testing.")

@@ -16,11 +16,12 @@ from sklearn.inspection import permutation_importance
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import median_absolute_error
 from sklearn.metrics import mean_squared_error
+import numpy as np
 
 
-def get_Xy(dataframe, feature_names, label_name):
+def make_Xy_from_df(dataframe, feature_names, label_name):
     """
-    Get numpy array of dataframe.
+    Get ndarray of dataframe. No splitting of train-test.
 
     Parameters
     ----------
@@ -102,10 +103,12 @@ def get_prediction_score(model, X_test, y_test):
 
     score['mean_sq_err'] = mean_squared_error(y_true=y_test, y_pred=pred)
 
+    score['root_mse'] = np.sqrt(score['mean_sq_err'])
+
     return score
 
 
-def get_importance(model, X, y, model_name=None):
+def get_importance(X, y, model=None, model_name=None):
     """
     Get the importances of features used by a model.
 

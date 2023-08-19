@@ -12,199 +12,41 @@ to do a fast test to make sure everything runs
 well.
 mini_test=False to do the long training.
 
-This is intended for my own testing purpose. The user
-program is in another module.
+It is the main place to preprocess the input
+data. Then, the data will be train test split.
+The prepared df in ready-preprocessed form in saved
+in pickle so that it can be used by other modules
+without going through the preprocessing steps again.
+The prepared df is also split into the corresponding
+train and test df_X and df_y forms.
+The X and y ndarray for train and test will be
+pickled for use by other modules.
 """
 
-
-from my_std_lib import output_file
-from my_std_lib import feature_conf
-from my_std_lib import cv_score_conf
-from my_std_lib import models_conf
-from my_std_lib import pred_conf
-from my_std_lib import importance_conf
-from my_std_lib import output_path
+from my_std_lib import mini_test
+from my_std_lib import table_name
 from my_std_lib import data_path
-
-from my_model_maker import get_models_available
-from my_model_maker import make_model
-from my_model_eval import get_prediction_score
-from my_model_eval import load_model
-from my_model_eval import get_importance
+from my_std_lib import feature_conf
+from my_std_lib import check_file_directory
 from my_preprocessing import prep_save
 from my_preprocessing import prep_load
 from my_prepare_dataset import make_train_test
+# from main_feature_selection import select_features
 from my_prepare_dataset import load_Xy_set
+from main_prediction import make_all_prediction
+from main_importances import get_all_important_features
+from main_model import make_all_models
 from configparser import ConfigParser
-from time import time
-import os
 import joblib
-
-# Do a mini-test or real test
-# Fast mini-test to make sure everything
-# runs well.
-mini_test = False
-
-
-def get_important_features(X_train, y_train):
-    """
-    Inspect the importance of each features is for an estimator.
-
-    Parameters
-    ----------
-    X_test : ndarray of shape(nsamples, nfeatures)
-        Features from training set can be used.
-    y_test : TYPE
-        Label from training set can be used.
-
-    Returns
-    -------
-    None.
-
-    """
-    # Store score to output file
-    f = open(output_file, "a")
-
-    # Also write the score to a config file
-    config = ConfigParser()
-
-    # Model to use
-    model_list = get_models_available(kind='regressor')
-
-    # Display where the information is
-    for estimator_name in model_list:
-        print(f"feature importances {estimator_name} ...")
-
-        # each estimator has one section
-        config[estimator_name] = {}
-
-        # load model
-        model = load_model(estimator_name)
-        print(f"{estimator_name} - loaded")
-
-        start_time = time()
-        impt = get_importance(model, X_train, y_train)
-
-        elapsed_time = time() - start_time
-        print(f"{elapsed_time/60} min taken")
-
-        for k, v in impt.items():
-            config[estimator_name][k] = str(v)
-            f.write(f"{k}: {v} \n")
-            # print(f"{k}: {v}") # too verbose
-
-    # close the file
-    f.close()
-
-    # write and close the config
-    with open(importance_conf, 'a') as configfile:
-        config.write(configfile)
-
-    print("Finish feature importances")
-
-
-def make_all_prediction(X_test, y_test):
-    """
-    Make prediction from the models built.
-
-    Parameters
-    ----------
-    X_test : ndarray of shape(nsamples, nfeatures)
-        Features for testing.
-    y_test : ndarray of shape(nsamples, )
-        Label for testing.
-
-    Returns
-    -------
-    Multiple scoring parameters defined in my standard library.
-
-    """
-    # Store score to output file
-    f = open(output_file, "a")
-    # Also write the score to a config file
-    config = ConfigParser()
-
-    # Model to use
-    model_list = get_models_available(kind='regressor')
-
-    # Display where the information is
-    for estimator_name in model_list:
-        print(f"prediction {estimator_name} ...")
-        # each estimator has one section
-        config[estimator_name] = {}
-        # load model
-        model = load_model(estimator_name)
-        f.write(f"{estimator_name} \n")
-        print(f"{estimator_name} - loaded")
-
-        # mini test to make prediction to make sure everything
-        # runs fine
-        score = get_prediction_score(model, X_test, y_test)
-        for k, v in score.items():
-            config[estimator_name][k] = str(v)
-            f.write(f"{k}: {v} \n")
-            print(f"{k}: {v}")
-
-    # close the file
-    f.close()
-
-    # write and close the config
-    with open(pred_conf, 'a') as configfile:
-        config.write(configfile)
-
-    print("Finish prediction")
-
-
-def make_all_models(X_train, y_train):
-    """
-    Make all the models.
-
-    Parameters
-    ----------
-    X_train : ndarray of shape (nsamples, nfeatures)
-        Features for training.
-    y_train : ndarray of shape (nsamples, )
-        Label for training.
-
-    Returns
-    -------
-    None. Result are written to 'output.txt'. Parameters of models
-    are written to 'models.conf'. CV scores are written to
-    'cv_score.conf'
-
-    """
-    # Model to use
-    model_list = get_models_available(kind='regressor')
-
-    # Display where the information is
-    for estimator_name in model_list:
-        print(f"training {estimator_name} ...")
-
-        start_time = time()
-        make_model(estimator_name, X_train, y_train)
-
-        elapsed_time = time() - start_time
-        print(f"{elapsed_time/60} min taken")
-
-        model_file = output_path + estimator_name + ".pkl"
-        print(f"{model_file} - model ready for use")
-
-    print(f"{output_file} - outputs for easy reading")
-    print(f"{cv_score_conf} - cv scores")
-    print(f"{models_conf} - parameters of models")
 
 
 # Main
 if __name__ == '__main__':
 
-    # check if the file directory exists
-    if os.path.exists(data_path) is False:
-        os.mkdir(data_path)
-    if os.path.exists(output_path) is False:
-        os.mkdir(output_path)
+    # check for output and data directories exist
+    check_file_directory()
 
     # sqlite table name
-    table_name = 'score'
     dataframe_file = data_path + table_name + '.pkl'
 
     try:
@@ -227,7 +69,9 @@ if __name__ == '__main__':
     feature_names.remove(label_name)
 
     # write the features to a file.
-    # A feature can be turned on or off.
+    # A feature can be turned on or off
+    # in another module. This is to write
+    # the available features for experiment.
     config = ConfigParser()
     config['features'] = {}
     for i in feature_names:
@@ -237,10 +81,20 @@ if __name__ == '__main__':
     with open(feature_conf, "w") as configfile:
         config.write(configfile)
 
-    # make the train test set
+    # Make the train test set
     # X_train, X_test, y_train, y_test are in
     # pickle files.
+    # for all features, no selection.
+    # Either this line or the select_features must be written
+    # to get the train-test set.
     make_train_test(df_prep, feature_names, label_name, table_name)
+    # Select features and make them into train-test set.
+    # Actually in this test file, the select_feature is not useful
+    # because the features conf file will always get overwritten
+    # by the code just before this.
+    # This is just when run as individual pipeline.
+    # This is put here as a testing to be turned on or off.
+    # select_features()
 
     # get a train set
     X_train, y_train = load_Xy_set(table_name, kind='train')
@@ -249,16 +103,20 @@ if __name__ == '__main__':
     X_test, y_test = load_Xy_set(table_name, kind='test')
 
     # Doing mini-test or real test
+    print(f"This is a mini test: {mini_test}")
     if mini_test is True:
         # mini test to make sure everything runs fine
         make_all_models(X_train[:50, :], y_train[:50])
-        # get_important_features(X_train[:10, :], y_train[:10])
+        get_all_important_features(X_train[:10, :], y_train[:10])
         make_all_prediction(X_test[:5], y_test[:5])
     elif mini_test is False:
         # the real train set
+        # this step is a short hand for writing the necessary
+        # models.conf file. The params.conf is a copy of this,
+        # which can be used for setting parameters.
         make_all_models(X_train, y_train)
         # get_important_features(X_train, y_train)
-        make_all_prediction(X_test, y_test)
+        # make_all_prediction(X_test, y_test)
     else:
         print("Not doing any training or testing.")
 

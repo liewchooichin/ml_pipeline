@@ -8,6 +8,7 @@ Read from the score.db.
 Then, save the dataframe to a pickle file.
 """
 
+from my_std_lib import table_name
 from my_std_lib import data_path
 from my_get_db import db_pickle
 import os
@@ -16,12 +17,12 @@ import os
 if __name__ == '__main__':
 
     # check if the file directory exists
-    if os.path.exists(data_path) == False:
+    if os.path.exists(data_path) is False:
         os.mkdir(data_path)
 
     # URL of db file
     db_url = 'https://techassessment.blob.core.windows.net/aiap-preparatory-bootcamp/score.db'
-    table_name = 'score'
+    # table_name = 'score'
     db_name = data_path + table_name + '.db'
     pickle_name = data_path + 'score.pkl'
 
