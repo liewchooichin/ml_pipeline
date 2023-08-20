@@ -72,7 +72,7 @@ def get_all_important_features(X_train, y_train):
     f.close()
 
     # write and close the config
-    with open(importance_conf, 'a') as configfile:
+    with open(importance_conf, 'w') as configfile:
         config.write(configfile)
 
     print("Finish feature importances")

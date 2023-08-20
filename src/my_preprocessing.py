@@ -10,7 +10,7 @@ Preprocessing the raw dataframe features and label.
 import numpy as np
 import pandas as pd
 import joblib
-from my_std_lib import data_path
+from my_std_lib import output_path
 
 
 def _process_sleep(raw):
@@ -28,7 +28,7 @@ def _process_sleep(raw):
     raw['sleep_duration'] = diff_time.dt.seconds / 3600
 
     # Binarize the duration
-    raw['sleep'] = pd.cut(
+    raw['sleep_enough'] = pd.cut(
         raw['sleep_duration'],
         bins=[0, 7, 10],
         labels=['0', '1'],
@@ -46,7 +46,7 @@ def _process_attendance(raw):
     raw['attendance_rate'] = raw['attendance_rate'].fillna(value=med)
     # Binarize the attendance_rate
     q1 = raw['attendance_rate'].quantile(0.25)
-    raw['attendance_rate'] = pd.cut(
+    raw['attendance_enough'] = pd.cut(
         raw['attendance_rate'],
         bins=[0, q1, 100.0],
         labels=['0', '1'],
@@ -207,13 +207,13 @@ def process_all_cols(raw):
 
     # sleep
     _process_sleep(raw)
-    print("sleep")
-    print(f"{raw['sleep'].unique()}")
+    print("sleep_enough")
+    print(f"{raw['sleep_enough'].unique()}")
 
     # attendance_rate
     _process_attendance(raw)
-    print("attendance")
-    print(f"{raw['attendance_rate'].unique()}")
+    print("attendance_enough")
+    print(f"{raw['attendance_enough'].unique()}")
 
     # nan in final_test
     _process_final_test(raw)
@@ -291,7 +291,7 @@ def save_dataframe(dataframe, filename="dataframe"):
     None.
 
     """
-    pickle_name = data_path + filename + '.pkl'
+    pickle_name = output_path + filename + '.pkl'
     j = joblib.dump(dataframe, pickle_name)
     print(f"{j} is pickled to {pickle_name}")
 
@@ -317,7 +317,7 @@ def prep_load(filename=default_filename):
         Dataframe loaded from the pickle file.
 
     """
-    pickle_name = data_path + filename + '.pkl'
+    pickle_name = output_path + filename + '.pkl'
     prep_df = joblib.load(pickle_name)
     return prep_df
 

@@ -42,7 +42,9 @@ def get_models_available(kind='all'):
 
     """
     regressor = ['polynomial', 'sgd', 'svr', 'forest', 'knn']
+
     classifier = []
+
     if kind == 'all':
         return regressor + classifier
     elif kind == 'regressor':
@@ -157,12 +159,12 @@ def make_sgd_regressor(X, y, param=None):
     if param is not None:
         param_grid = param
     else:
-        # alpha increase by 5 times from the default values
+        # alpha increase by 10 times from the default values
         param_grid = {
             'sgd__loss': ['squared_error', 'huber',
                           'epsilon_insensitive',
                           'squared_epsilon_insensitive'],
-            'sgd__alpha': [0.0001, 0.001, 0.005, 0.0125, 0.025]
+            'sgd__alpha': [0.0001, 0.001, 0.01, 0.1]
         }
 
     grid = _do_grid_search(sgd, param_grid, X, y)
@@ -189,9 +191,7 @@ def make_polynomial(X, y, param=None):
         param_grid = param
     else:
         param_grid = {
-            'polynomial__degree': [1, 2, 3, 4, 5],
-            'polynomial__interaction_only': [False, True],
-            'polynomial__include_bias': [False, True]
+            'polynomial__degree': [1, 2, 3, 4, 5]
         }
 
     grid = _do_grid_search(poly, param_grid, X, y)

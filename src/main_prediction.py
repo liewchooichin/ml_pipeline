@@ -66,7 +66,7 @@ def make_all_prediction(X_test, y_test):
     f.close()
 
     # write and close the config
-    with open(pred_conf, 'a') as configfile:
+    with open(pred_conf, 'w') as configfile:
         config.write(configfile)
 
     print("Finish prediction")

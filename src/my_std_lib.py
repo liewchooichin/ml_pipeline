@@ -11,7 +11,7 @@ import os
 
 # mini test to test small size data to
 # make sure everything runs well.
-mini_test = True
+mini_test = False
 
 # name of the table or dataset name.
 # use short name.

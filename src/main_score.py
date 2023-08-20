@@ -30,8 +30,8 @@ from my_std_lib import feature_conf
 from my_std_lib import check_file_directory
 from my_preprocessing import prep_save
 from my_preprocessing import prep_load
-from my_prepare_dataset import make_train_test
-# from main_feature_selection import select_features
+# from my_prepare_dataset import make_train_test
+from main_feature_selection import select_features
 from my_prepare_dataset import load_Xy_set
 from main_prediction import make_all_prediction
 from main_importances import get_all_important_features
@@ -87,14 +87,14 @@ if __name__ == '__main__':
     # for all features, no selection.
     # Either this line or the select_features must be written
     # to get the train-test set.
-    make_train_test(df_prep, feature_names, label_name, table_name)
+    # make_train_test(df_prep, feature_names, label_name, table_name)
     # Select features and make them into train-test set.
     # Actually in this test file, the select_feature is not useful
     # because the features conf file will always get overwritten
     # by the code just before this.
     # This is just when run as individual pipeline.
     # This is put here as a testing to be turned on or off.
-    # select_features()
+    select_features()
 
     # get a train set
     X_train, y_train = load_Xy_set(table_name, kind='train')

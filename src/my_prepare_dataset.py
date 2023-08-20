@@ -8,7 +8,7 @@ Prepare the dataframe into numpy for learning.
 """
 
 from my_std_lib import RND_NUM
-from my_std_lib import data_path
+from my_std_lib import output_path
 from my_get_db import write_df_to_sql
 from sklearn.model_selection import train_test_split
 import joblib
@@ -85,10 +85,10 @@ def make_train_test(dataframe, feature_names,
         )
 
     # Save a test dataframe in pd.DataFrame form.
-    filename = data_path + table_name + '_df_X_test.pkl'
+    filename = output_path + table_name + '_df_X_test.pkl'
     j = joblib.dump(df_X_test, filename)
     print(f"{j} pickled X_test dataframe")
-    filename = data_path + table_name + '_df_y_test.pkl'
+    filename = output_path + table_name + '_df_y_test.pkl'
     j = joblib.dump(df_y_test, filename)
     print(f"{j} pickled y_test dataframe")
     # concatenate this dataframe and write to sqlite3 db
@@ -143,19 +143,19 @@ def save_train_test(table_name, X_train, X_test, y_train, y_test):
 
     """
     # Save the train-test set
-    filename = data_path + table_name + '_X_train.pkl'
+    filename = output_path + table_name + '_X_train.pkl'
     j = joblib.dump(X_train, filename)
     print(f"{j} pickled {filename}")
 
-    filename = data_path + table_name + '_X_test.pkl'
+    filename = output_path + table_name + '_X_test.pkl'
     j = joblib.dump(X_test, filename)
     print(f"{j} pickled {filename}")
 
-    filename = data_path + table_name + '_y_train.pkl'
+    filename = output_path + table_name + '_y_train.pkl'
     j = joblib.dump(y_train, filename)
     print(f"{j} pickled {filename}")
 
-    filename = data_path + table_name + '_y_test.pkl'
+    filename = output_path + table_name + '_y_test.pkl'
     j = joblib.dump(y_test, filename)
     print(f"{j} pickled {filename}")
 
@@ -183,23 +183,23 @@ def load_Xy_set(table_name, kind='train'):
     y = None
     if kind == 'train':
         # get a train set
-        filename = data_path + table_name + '_X_train.pkl'
+        filename = output_path + table_name + '_X_train.pkl'
         print(f"Loading {filename}")
         X = joblib.load(filename)
         print(f"X_train loaded. {X.shape=}")
 
-        filename = data_path + table_name + '_y_train.pkl'
+        filename = output_path + table_name + '_y_train.pkl'
         print(f"Loading {filename}")
         y = joblib.load(filename)
         print(f"y_train loaded. {y.shape=}")
     elif kind == 'test':
         # get a test set
-        filename = data_path + table_name + '_X_test.pkl'
+        filename = output_path + table_name + '_X_test.pkl'
         print(f"Loading {filename}")
         X = joblib.load(filename)
         print(f"X_test loaded. {X.shape=}")
 
-        filename = data_path + table_name + '_y_test.pkl'
+        filename = output_path + table_name + '_y_test.pkl'
         print(f"Loading {filename}")
         y = joblib.load(filename)
         print(f"y_test loaded. {y.shape=}")
